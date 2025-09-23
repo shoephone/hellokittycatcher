@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Hello Kitty Catcher</title>
 <style>
   body {
@@ -142,7 +142,10 @@ let kittyPowerActive = false;
 
 // Move Kitty
 function moveKitty(newX) {
-  kittyX = Math.max(0, Math.min(window.innerWidth - kitty.offsetWidth, newX));
+  // allow kitty to reach the visual edges by clamping against the game container
+  const minX = -kitty.offsetWidth/2; // allow half off-screen on left
+  const maxX = game.clientWidth - kitty.offsetWidth/2; // allow half off-screen on right
+  kittyX = Math.max(minX, Math.min(maxX, newX));
   kitty.style.left = kittyX + "px";
 }
 
@@ -158,6 +161,11 @@ game.addEventListener("touchstart", e => {
   if(touchX < window.innerWidth / 2) moveKitty(kittyX - 40);
   else moveKitty(kittyX + 40);
 });
+
+// Prevent common zoom gestures (Ctrl/Cmd + wheel, Ctrl/Cmd + keys, gesture events on mobile)
+window.addEventListener('wheel', function(e){ if(e.ctrlKey || e.metaKey) e.preventDefault(); }, { passive: false });
+window.addEventListener('keydown', function(e){ if((e.ctrlKey || e.metaKey) && ['+','-','=','0'].includes(e.key)) e.preventDefault(); });
+window.addEventListener('gesturestart', function(e){ e.preventDefault(); });
 
 // Spawn items
 function spawnItem(type) {
