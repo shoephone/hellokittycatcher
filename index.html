@@ -173,6 +173,12 @@ function spawnItem(type) {
 
   let y = 0;
   let speed = 5;
+  if(type === "bomb"){
+    // bombs fall at varied speeds
+    speed = 4 + Math.random() * 6; // between ~4 and ~10
+    // make bomb a little larger (optional visual cue)
+    item.style.width = "72px";
+  }
   if(type==="powerup") speed = 10; // faster
 
   const fall = setInterval(()=>{
@@ -251,8 +257,36 @@ setInterval(()=>spawnItem("bow"), 1500);
 setInterval(()=>spawnItem("bow-golden"), 4000); 
 // spawn powerups much less frequently (every 30 seconds)
 setInterval(()=>spawnItem("powerup"), 30000);
-// spawn bombs occasionally
-setInterval(()=>spawnItem("bomb"), 12000);
+// spawn bombs occasionally with sporadic short "frenzy" periods (more frequent)
+function startBombSpawner(){
+  const baseDelay = 9000; // normal delay (more frequent)
+  // Normal periodic spawn
+  setInterval(()=>{
+    spawnItem("bomb");
+    // small chance to start a short frenzy where bombs are much more frequent
+    if(Math.random() < 0.12){ // ~12% chance per spawn
+      startBombFrenzy();
+    }
+  }, baseDelay);
+}
+
+let bombFrenzyActive = false;
+function startBombFrenzy(){
+  if(bombFrenzyActive) return;
+  bombFrenzyActive = true;
+  const frenzyDuration = 10000; // 10 seconds of increased frequency
+  const frenzyInterval = 1500; // spawn a bomb every 1.5s during frenzy
+
+  const id = setInterval(()=>{ spawnItem("bomb"); }, frenzyInterval);
+
+  setTimeout(()=>{
+    clearInterval(id);
+    bombFrenzyActive = false;
+  }, frenzyDuration);
+}
+
+// start the spawner
+startBombSpawner();
 
 // Pop-up
 function showPopup(){
@@ -287,6 +321,7 @@ function launchConfetti(amount){
 function resetGame(){
   // reset scores and counters
   score = 0;
+  // keep stored high score; just reload it for display
   highScore = localStorage.getItem("highScore") ? parseInt(localStorage.getItem("highScore")) : 0;
   scoreEl.textContent = "Bows: " + score;
   highscoreEl.textContent = "High Score: " + highScore;
