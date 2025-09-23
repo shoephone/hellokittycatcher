@@ -23,7 +23,7 @@
     bottom: 60px;
     left: 50%;
     transform: translateX(-50%);
-    width: 140px;
+    width: 120px; /* slightly smaller */
     z-index: 5;
     transition: transform 0.2s;
   }
@@ -31,7 +31,7 @@
   .item {
     position: absolute;
     top: 0;
-    width: 70px;
+    width: 60px; /* smaller for mobile */
     animation: wiggle 1s infinite ease-in-out;
   }
 
@@ -41,35 +41,34 @@
     100% { transform: rotate(-5deg); }
   }
 
-  #score {
+  #score, #highscore {
     position: absolute;
-    top: 20px;
+    top: 10px;
     left: 10px;
-    font-size: 28px;
+    font-size: 26px;
     color: white;
     z-index: 10;
   }
 
-  #high-score {
-    position: absolute;
-    top: 60px;
-    left: 10px;
-    font-size: 24px;
-    color: white;
-    z-index: 10;
+  #highscore {
+    top: 40px;
   }
 
-  @keyframes highScorePop {
-    0% { transform: scale(1); color: white; }
-    50% { transform: scale(1.5); color: gold; }
-    100% { transform: scale(1); color: white; }
-  }
+#specialCounter, #goldenCounter {
+  display: flex;
+  align-items: center;
+  font-size: 20px;
+  color: white;
+}
 
-  #high-score.pop {
-    animation: highScorePop 0.6s ease-in-out;
-  }
+#specialCounter img, #goldenCounter img {
+  width: 32px;
+  height: 32px;
+  margin-right: 5px;
+}
 
-  #popup, #gold-popup {
+
+  #popup {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -81,7 +80,7 @@
     transition: transform 0.5s cubic-bezier(.68,-0.55,.27,1.55), opacity 0.5s ease-in-out;
   }
 
-  #popup.show, #gold-popup.show {
+  #popup.show {
     transform: translate(-50%, -50%) scale(1);
     opacity: 1;
   }
@@ -95,151 +94,176 @@
     pointer-events: none;
     opacity: 0.9;
   }
-
-  @media (max-width: 480px) {
-    #kitty { bottom: 60px; width: 140px; }
-    .item { width: 60px; }
-    #popup, #gold-popup { width: 120px; }
-    #score { font-size: 32px; }
-    #high-score { font-size: 28px; }
-    .confetti { width: 6px; height: 6px; }
-  }
 </style>
 </head>
 <body>
 
 <div id="game">
   <div id="score">Bows: 0</div>
-  <div id="high-score">High Score: 0</div>
+  <div id="highscore">High Score: 0</div>
+
+<div id="counters" style="position:absolute; top:10px; right:10px; display:flex; gap:10px; z-index:10;">
+  <div id="specialCounter" style="display:none; align-items:center;">
+    <img src="special.png" alt="Special">
+    <span id="specialCount">0</span>
+  </div>
+  <div id="goldenCounter" style="display:none; align-items:center;">
+    <img src="golden-special.png" alt="Golden Special">
+    <span id="goldenCount">0</span>
+  </div>
+</div>
+
+
   <img id="kitty" src="hello-kitty.png" alt="Hello Kitty">
   <img id="popup" src="special.png" alt="Special Pop-up!">
-  <img id="gold-popup" src="golden-special.png" alt="Golden Special!" />
 </div>
 
 <script>
 const game = document.getElementById("game");
 const kitty = document.getElementById("kitty");
 const scoreEl = document.getElementById("score");
-const highScoreEl = document.getElementById("high-score");
+const highscoreEl = document.getElementById("highscore");
 const popup = document.getElementById("popup");
-const goldPopup = document.getElementById("gold-popup");
+const specialCounter = document.getElementById("specialCounter");
+const goldenCounter = document.getElementById("goldenCounter");
+const specialCount = document.getElementById("specialCount");
+const goldenCount = document.getElementById("goldenCount");
 
 let score = 0;
+let highScore = localStorage.getItem("highScore") ? parseInt(localStorage.getItem("highScore")) : 0;
+highscoreEl.textContent = "High Score: " + highScore;
+
+let specials = 0;
+let goldenSpecials = 0;
 let kittyX = window.innerWidth / 2;
+let kittyPowerActive = false;
 
-// High score from localStorage
-let highScore = localStorage.getItem("helloKittyHighScore") || 0;
-highScoreEl.textContent = "High Score: " + highScore;
-
-// Move Kitty function
+// Move Kitty
 function moveKitty(newX) {
   kittyX = Math.max(0, Math.min(window.innerWidth - kitty.offsetWidth, newX));
   kitty.style.left = kittyX + "px";
 }
 
-// Desktop: arrow keys
-document.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowLeft") moveKitty(kittyX - 30);
-  if (e.key === "ArrowRight") moveKitty(kittyX + 30);
+// Arrow keys
+document.addEventListener("keydown", e => {
+  if(e.key === "ArrowLeft") moveKitty(kittyX - 30);
+  if(e.key === "ArrowRight") moveKitty(kittyX + 30);
 });
 
-// Mobile: tap left/right
-game.addEventListener("touchstart", (e) => {
+// Tap for mobile
+game.addEventListener("touchstart", e => {
   const touchX = e.touches[0].clientX;
-  if (touchX < window.innerWidth / 2) moveKitty(kittyX - 40);
+  if(touchX < window.innerWidth / 2) moveKitty(kittyX - 40);
   else moveKitty(kittyX + 40);
 });
 
-// Spawn falling bows (normal or golden)
-function spawnItem() {
+// Spawn items
+function spawnItem(type) {
   const item = document.createElement("img");
-  const isGolden = Math.random() < 0.05; // 5% chance for golden bow
-  item.src = isGolden ? "bow-golden.png" : "bow.png";
+  if(type==="bow") item.src="bow.png";
+  if(type==="bow-golden") item.src="bow-golden.png";
+  if(type==="powerup") item.src="powerup.png";
+
   item.classList.add("item");
   item.style.left = Math.random() * (window.innerWidth - 100) + "px";
   game.appendChild(item);
 
   let y = 0;
-  const fall = setInterval(() => {
-    y += 5;
+  let speed = 5;
+  if(type==="powerup") speed = 8; // faster
+
+  const fall = setInterval(()=>{
+    y += speed;
     item.style.top = y + "px";
 
     const kittyRect = kitty.getBoundingClientRect();
     const itemRect = item.getBoundingClientRect();
 
-    if (
-      itemRect.bottom >= kittyRect.top &&
-      itemRect.left + itemRect.width/2 >= kittyRect.left &&
-      itemRect.right - itemRect.width/2 <= kittyRect.right
-    ) {
-      score++;
-      scoreEl.textContent = "Bows: " + score;
+    if(itemRect.bottom >= kittyRect.top &&
+       itemRect.left + itemRect.width/2 >= kittyRect.left &&
+       itemRect.right - itemRect.width/2 <= kittyRect.right) {
 
-      // Kitty bounce
-      kitty.style.transform = "translateX(-50%) scale(1.25)";
-      setTimeout(() => { kitty.style.transform = "translateX(-50%) scale(1)"; }, 150);
+      if(type==="bow"){
+        score++;
+        scoreEl.textContent = "Bows: "+score;
+        if(score > highScore) { 
+          highScore = score; 
+          highscoreEl.textContent = "High Score: "+highScore; 
+          localStorage.setItem("highScore", highScore);
+        }
 
-      // Update high score
-      if (score > highScore) {
-        highScore = score;
-        localStorage.setItem("helloKittyHighScore", highScore);
-        highScoreEl.textContent = "High Score: " + highScore;
-        highScoreEl.classList.add("pop");
-        setTimeout(() => { highScoreEl.classList.remove("pop"); }, 600);
+        if(!kittyPowerActive){
+          kitty.style.transform="translateX(-50%) scale(1.25)";
+          setTimeout(()=>{ kitty.style.transform="translateX(-50%) scale(1)"; },150);
+        }
+
+        // Every 10 bows → special + confetti
+        if(score % 10 === 0){
+          specials++;
+          specialCounter.style.display="flex";
+          specialCount.textContent = specials;
+          showPopup();
+          launchConfetti(30);
+        }
+
+      } else if(type==="bow-golden"){
+        goldenSpecials++;
+        goldenCounter.style.display="flex";
+        goldenCount.textContent = goldenSpecials;
+      } else if(type==="powerup" && !kittyPowerActive){
+        kittyPowerActive = true;
+        kitty.src="golden-special.png";
+        kitty.style.transform="translateX(-50%) scale(2)";
+
+        setTimeout(()=>{
+          kitty.src="hello-kitty.png";
+          kitty.style.transform="translateX(-50%) scale(1)";
+          kittyPowerActive = false;
+        },5000);
       }
 
-      // Golden bow special
-      if (isGolden) showGoldPopup();
-      else if (score % 10 === 0) {
-        showPopup();
-        launchConfetti(30);
-      }
-
-      game.removeChild(item);
+      if(game.contains(item)) game.removeChild(item);
       clearInterval(fall);
     }
 
-    if (y > window.innerHeight) {
-      if (game.contains(item)) game.removeChild(item);
+    if(y > window.innerHeight){
+      if(game.contains(item)) game.removeChild(item);
       clearInterval(fall);
     }
-  }, 30);
+  },30);
 }
 
-// Spawn items every 1.5s
-setInterval(spawnItem, 1500);
+// Spawn intervals
+setInterval(()=>spawnItem("bow"), 1500);
+setInterval(()=>spawnItem("bow-golden"), 4000); 
+setInterval(()=>spawnItem("powerup"), 6000); // increased frequency
 
-// Pop-up functions
-function showPopup() {
+// Pop-up
+function showPopup(){
   popup.classList.add("show");
-  setTimeout(() => { popup.classList.remove("show"); }, 1000);
-}
-function showGoldPopup() {
-  goldPopup.classList.add("show");
-  setTimeout(() => { goldPopup.classList.remove("show"); }, 1200);
-  launchConfetti(50); // bigger confetti for golden bow
+  setTimeout(()=>{ popup.classList.remove("show"); },1000);
 }
 
-// Confetti effect
-function launchConfetti(amount) {
-  for (let i = 0; i < amount; i++) {
+// Confetti
+function launchConfetti(amount){
+  for(let i=0;i<amount;i++){
     const confetti = document.createElement("div");
     confetti.classList.add("confetti");
-    confetti.style.backgroundColor = `hsl(${Math.random()*360}, 80%, 60%)`;
-    confetti.style.left = Math.random() * window.innerWidth + "px";
-    confetti.style.top = "0px";
+    confetti.style.backgroundColor = `hsl(${Math.random()*360},80%,60%)`;
+    confetti.style.left=Math.random()*window.innerWidth+"px";
+    confetti.style.top="0px";
     game.appendChild(confetti);
 
-    let y = 0;
-    const fall = setInterval(() => {
-      y += Math.random() * 7 + 3;
-      confetti.style.top = y + "px";
-      confetti.style.transform = `rotate(${y*5}deg)`;
-      if (y > window.innerHeight) {
-        game.removeChild(confetti);
+    let y=0;
+    const fall=setInterval(()=>{
+      y += Math.random()*7+3;
+      confetti.style.top=y+"px";
+      confetti.style.transform=`rotate(${y*5}deg)`;
+      if(y>window.innerHeight){
+        if(game.contains(confetti)) game.removeChild(confetti);
         clearInterval(fall);
       }
-    }, 30);
+    },30);
   }
 }
 </script>
