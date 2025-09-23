@@ -15,11 +15,13 @@
   #game {
     position: relative;
     width: 100vw;
-    height: 100vh;
+    /* raise the bottom of the frame by reducing game height */
+    height: calc(100vh - 120px); /* adjust this value to move bottom up/down */
   }
 
   #kitty {
     position: absolute;
+    /* keep kitty visually above the new bottom */
     bottom: 60px;
     left: 50%;
     transform: translateX(-50%);
@@ -170,7 +172,7 @@ function spawnItem(type) {
 
   let y = 0;
   let speed = 5;
-  if(type==="powerup") speed = 15; // faster
+  if(type==="powerup") speed = 10; // faster
 
   const fall = setInterval(()=>{
     y += speed;
@@ -270,5 +272,3 @@ function launchConfetti(amount){
 
 </body>
 </html>
-
-
