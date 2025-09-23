@@ -164,6 +164,7 @@ function spawnItem(type) {
   const item = document.createElement("img");
   if(type==="bow") item.src="bow.png";
   if(type==="bow-golden") item.src="bow-golden.png";
+  if(type==="bomb") item.src="bomb.png";
   if(type==="powerup") item.src="powerup.png";
 
   item.classList.add("item");
@@ -184,6 +185,16 @@ function spawnItem(type) {
     if(itemRect.bottom >= kittyRect.top &&
        itemRect.left + itemRect.width/2 >= kittyRect.left &&
        itemRect.right - itemRect.width/2 <= kittyRect.right) {
+
+      // Bomb behavior: if kitty is powered (golden) ignore; otherwise reset game
+      if(type === "bomb"){
+        if(!kittyPowerActive){
+          resetGame();
+        }
+        if(game.contains(item)) game.removeChild(item);
+        clearInterval(fall);
+        return; // skip other effects
+      }
 
       if(type==="bow"){
         score++;
@@ -238,7 +249,10 @@ function spawnItem(type) {
 // Spawn intervals
 setInterval(()=>spawnItem("bow"), 1500);
 setInterval(()=>spawnItem("bow-golden"), 4000); 
-setInterval(()=>spawnItem("powerup"), 6000); // increased frequency
+// spawn powerups much less frequently (every 30 seconds)
+setInterval(()=>spawnItem("powerup"), 30000);
+// spawn bombs occasionally
+setInterval(()=>spawnItem("bomb"), 12000);
 
 // Pop-up
 function showPopup(){
@@ -267,6 +281,33 @@ function launchConfetti(amount){
       }
     },30);
   }
+}
+
+// Reset game state when a bomb is caught by normal kitty
+function resetGame(){
+  // reset scores and counters
+  score = 0;
+  highScore = localStorage.getItem("highScore") ? parseInt(localStorage.getItem("highScore")) : 0;
+  scoreEl.textContent = "Bows: " + score;
+  highscoreEl.textContent = "High Score: " + highScore;
+  specials = 0;
+  goldenSpecials = 0;
+  specialCount.textContent = specials;
+  goldenCount.textContent = goldenSpecials;
+  specialCounter.style.display = "none";
+  goldenCounter.style.display = "none";
+
+  // remove all falling items and confetti
+  const toRemove = Array.from(game.querySelectorAll('.item, .confetti'));
+  toRemove.forEach(el => { if(game.contains(el)) game.removeChild(el); });
+
+  // remove popup
+  popup.classList.remove('show');
+
+  // reset kitty state
+  kitty.src = "hello-kitty.png";
+  kitty.style.transform = "translateX(-50%) scale(1)";
+  kittyPowerActive = false;
 }
 </script>
 
