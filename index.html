@@ -20,10 +20,10 @@
 
   #kitty {
     position: absolute;
-    bottom: 20px;
+    bottom: 60px; /* higher up for mobile Safari */
     left: 50%;
     transform: translateX(-50%);
-    width: 175px;
+    width: 140px; /* slightly smaller */
     z-index: 5;
     transition: transform 0.2s;
   }
@@ -31,7 +31,7 @@
   .item {
     position: absolute;
     top: 0;
-    width: 80px;
+    width: 70px; /* smaller for mobile */
     animation: wiggle 1s infinite ease-in-out;
   }
 
@@ -43,19 +43,18 @@
 
   #score {
     position: absolute;
-    top: 10px;
+    top: 20px;
     left: 10px;
-    font-size: 24px;
+    font-size: 28px; /* larger */
     color: white;
     z-index: 10;
   }
 
-  /* Pop-up image for every 10 bows */
   #popup {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 220px;
+    width: 140px; /* smaller pop-up */
     transform: translate(-50%, -50%) scale(0);
     opacity: 0;
     z-index: 20;
@@ -68,11 +67,22 @@
     opacity: 1;
   }
 
+  .confetti {
+    position: absolute;
+    width: 8px;  /* slightly smaller */
+    height: 8px;
+    background-color: yellow;
+    z-index: 30;
+    pointer-events: none;
+    opacity: 0.9;
+  }
+
+  /* Mobile adjustments */
   @media (max-width: 480px) {
-    #kitty { width: 100px; }
+    #kitty { bottom: 60px; width: 140px; }
     .item { width: 60px; }
-    #popup { width: 2000px; }
-    #score { font-size: 18px; }
+    #popup { width: 120px; } 
+    #score { font-size: 32px; }
   }
 </style>
 </head>
@@ -93,7 +103,7 @@ const popup = document.getElementById("popup");
 let score = 0;
 let kittyX = window.innerWidth / 2;
 
-// Movement function
+// Move Kitty function
 function moveKitty(newX) {
   kittyX = Math.max(0, Math.min(window.innerWidth - kitty.offsetWidth, newX));
   kitty.style.left = kittyX + "px";
@@ -101,23 +111,23 @@ function moveKitty(newX) {
 
 // Desktop: arrow keys
 document.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowLeft") moveKitty(kittyX - 20);
-  if (e.key === "ArrowRight") moveKitty(kittyX + 20);
+  if (e.key === "ArrowLeft") moveKitty(kittyX - 30);
+  if (e.key === "ArrowRight") moveKitty(kittyX + 30);
 });
 
 // Mobile: tap left/right
 game.addEventListener("touchstart", (e) => {
   const touchX = e.touches[0].clientX;
-  if (touchX < window.innerWidth / 2) moveKitty(kittyX - 30);
-  else moveKitty(kittyX + 30);
+  if (touchX < window.innerWidth / 2) moveKitty(kittyX - 40);
+  else moveKitty(kittyX + 40);
 });
 
-// Spawn falling items
+// Spawn falling bows
 function spawnItem() {
   const item = document.createElement("img");
   item.src = "bow.png";
   item.classList.add("item");
-  item.style.left = Math.random() * (window.innerWidth - 50) + "px";
+  item.style.left = Math.random() * (window.innerWidth - 100) + "px";
   game.appendChild(item);
 
   let y = 0;
@@ -136,15 +146,18 @@ function spawnItem() {
       score++;
       scoreEl.textContent = "Bows: " + score;
 
-      // Bounce animation
-      kitty.style.transform = "translateX(-50%) scale(1.2)";
+      // Kitty bounce
+      kitty.style.transform = "translateX(-50%) scale(1.25)";
       setTimeout(() => { kitty.style.transform = "translateX(-50%) scale(1)"; }, 150);
 
       game.removeChild(item);
       clearInterval(fall);
 
-      // Every 10 bows, show pop-up
-      if (score % 10 === 0) showPopup();
+      // Every 10 bows: pop-up + confetti
+      if (score % 10 === 0) {
+        showPopup();
+        launchConfetti(30);
+      }
     }
 
     // Remove if out of bounds
@@ -161,9 +174,30 @@ setInterval(spawnItem, 1500);
 // Pop-up function
 function showPopup() {
   popup.classList.add("show");
-  setTimeout(() => {
-    popup.classList.remove("show");
-  }, 1000);
+  setTimeout(() => { popup.classList.remove("show"); }, 1000);
+}
+
+// Confetti effect
+function launchConfetti(amount) {
+  for (let i = 0; i < amount; i++) {
+    const confetti = document.createElement("div");
+    confetti.classList.add("confetti");
+    confetti.style.backgroundColor = `hsl(${Math.random()*360}, 80%, 60%)`;
+    confetti.style.left = Math.random() * window.innerWidth + "px";
+    confetti.style.top = "0px";
+    game.appendChild(confetti);
+
+    let y = 0;
+    const fall = setInterval(() => {
+      y += Math.random() * 7 + 3;
+      confetti.style.top = y + "px";
+      confetti.style.transform = `rotate(${y*5}deg)`;
+      if (y > window.innerHeight) {
+        game.removeChild(confetti);
+        clearInterval(fall);
+      }
+    }, 30);
+  }
 }
 </script>
 
